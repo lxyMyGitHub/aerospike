@@ -1,0 +1,65 @@
+Java客户端最佳实践
+    使用Aerospike Java客户端API时，请遵循以下最佳实践。
+
+        1.使用AerospikeClient同步和异步应用。
+            AsyncClient现在已过时，仅适用于旧版应用程序。
+            AerospikeClient异步方法包含一个新EventLoop参数，该参数允许用户指定哪个事件循环线程应处理该命令。
+            然后可以将指定同一事件循环的多个命令假定为单线程，并且不需要较慢的原子操作。
+            旧的AsyncClient不允许指定事件循环。
+        2.订阅客户端日志记录功能以接收重要的群集状态消息：
+            public class MyConsole implements Log.Callback {
+                  public MyConsole() {
+                      Log.setLevel(Log.Level.INFO);
+                      Log.setCallback(this);
+                  }
+
+                  @Override
+                  public void log(Log.Level level, String message) {
+                      // Write log messages to the appropriate place.
+                  }
+            }
+        3.设置ClientPolicy.maxConnsPerNode为每个服务器节点允许的最大连接数（默认为300）。
+            同步和异步连接被分别跟踪。
+            每个节点使用的连接数取决于进行中的并发命令以及用于并行多节点命令（批处理，扫描和查询）的子命令。
+            每个命令将使用一个连接。
+            如果将超过最大连接数，则事务将失败。
+        4.每个AerospikeClient实例都产生一个维护线程，该线程定期向所有服务器节点发出信息请求，以获取集群状态和分区图。
+            多个客户端实例在服务器上创建了额外的负载。
+            应用程序中每个群集仅使用一个客户端实例，并在多个线程之间共享该实例。
+            AerospikeClient是线程安全的。
+        5.默认情况下，用户定义的密钥不存储在服务器上。
+            它被转换为用于标识记录的哈希摘要。
+            如果用户定义的密钥必须在服务器上保留，请使用以下方法之一：
+                设置WritePolicy.sendKey为true-密钥在写操作时发送到服务器进行存储，并在多记录扫描和查询时进行检索。
+                明确存储和检索用户定义的密钥到bin中。
+        6.不要使用Value或Bin接受对象的构造函数。
+            这些构造函数比硬编码的构造函数慢，因为必须查询（使用instanceof）其实型对象。
+            他们还使用默认的Java序列化程序，这是所有序列化实现中最慢的。
+            而是使用更好的序列化程序来序列化对象，并使用byte []构造函数。
+        7.用于AerospikeClient.operate()在单个调用中对同一记录批处理多个操作（添加/获取）。
+        8.如果在事务中创建或更新了所有记录bin，请在事务上启用“Replace”模式以提高性能。
+            然后，服务器不必在更新之前读取旧记录。
+            更新部分bins时，请勿使用“Replace”模式。
+              WritePolicy policy = new WritePolicy();
+              policy.recordExistsAction = RecordExistsAction.REPLACE;
+              client.put(policy, key, bins);
+        9.每个数据库命令都将策略作为第一个参数。
+            如果一组命令的策略相同，请重用它们，而不是为每个命令实例化策略
+            设置ClientPolicy默认值并在每个命令上传递空策略。
+                ClientPolicy policy = new ClientPolicy();
+                policy.readPolicyDefault.socketTimeout = 50;
+                policy.readPolicyDefault.totalTimeout = 110;
+                policy.readPolicyDefault.sleepBetweenRetries = 10;
+                policy.writePolicyDefault.socketTimeout = 200;
+                policy.writePolicyDefault.totalTimeout = 450;
+                policy.writePolicyDefault.sleepBetweenRetries = 50;
+                AerospikeClient client = new AerospikeClient(policy, "hostname", 3000);
+                client.put(null, new Key("test", "set", 1), new Bin("bin", 5));
+            如果某个策略需要更改为默认值（例如设置预期的生成时间），则可以即时实例化该策略
+                public void putIfGeneration(Key key, int generation, Bin... bins) {
+                      WritePolicy policy = new WritePolicy(client.writePolicyDefault);
+                      policy.generationPolicy = GenerationPolicy.EXPECT_GEN_EQUAL;
+                      policy.generation = generation;
+                      client.put(policy, key, bins);
+                }
+
