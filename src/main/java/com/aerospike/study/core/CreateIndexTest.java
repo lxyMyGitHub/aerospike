@@ -18,8 +18,8 @@ public class CreateIndexTest {
     public static void main(String[] args) {
 
         AerospikeClient client = clientPool.getClient();
-//        createIndex(client);
-        dropIndex(client);
+        createIndex(client);
+//        dropIndex(client);
     }
 
     /**
@@ -41,7 +41,7 @@ public class CreateIndexTest {
      * @param client
      */
     public static void createIndex(AerospikeClient client){
-        IndexTask task = client.createIndex(null, "test", "lxy_test001","idx_test_lxy_test001_name", "name", IndexType.STRING);
+        IndexTask task = client.createIndex(null, "test", "lxy_test001","idx_test_lxy_test001_age", "age", IndexType.NUMERIC);
         task.waitTillComplete();
     }
 
