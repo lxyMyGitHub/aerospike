@@ -62,6 +62,8 @@ public class TestCRUD {
         System.out.println(record.getString("name"));
         System.out.println(record.getString("age"));
         Record record1 = client.get(policy, key, "name", "age");
+        String str1 = record1.getString("");
+
         System.out.println(record1.toString());
     }
 

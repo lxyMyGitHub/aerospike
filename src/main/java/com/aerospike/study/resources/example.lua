@@ -53,3 +53,8 @@ reduce—将流中的值缩减为单个值。在该示例中，通过将流中�
 function count(stream)
     return stream : map(one) : reduce(add);
 end
+
+local mm = require("exports")
+function helloworld(rec)
+    return mm.hello() .. mm.world()
+end
