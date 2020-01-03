@@ -23,7 +23,7 @@ public class AerospikeConnectionPool {
 //                    new Host("192.168.44.141", 3000),
 //                    new Host("192.168.44.142", 3000),
 //                    new Host("192.168.44.143", 3000)
-                    new Host("192.168.2.130", 3000)
+                    new Host("192.168.242.165", 3000)
             };
             ClientPolicy policy = new ClientPolicy();
 //            用户名
@@ -51,7 +51,7 @@ public class AerospikeConnectionPool {
     public void init(){
         while(clientPool.size() < asPoolSize){
             Host[] hosts = new Host[] {
-                    new Host("192.168.2.130", 3000)
+                    new Host("192.168.242.165", 3000)
 //                    new Host("192.168.44.141", 3000),
 //                    new Host("192.168.44.142", 3000),
 //                    new Host("192.168.44.143", 3000)
